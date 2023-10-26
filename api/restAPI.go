@@ -1,23 +1,21 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"sync"
+	"os"
+	"path"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/labstack/gommon/log"
+	"github.com/neboman11/timelapse-manager/models"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
-
-var makingRequest sync.Mutex
 
 // Starts listening for requests on the given port
 func HandleRequests(port int, database *gorm.DB) {
@@ -29,11 +27,10 @@ func HandleRequests(port int, database *gorm.DB) {
 	e.Use(middleware.CORS())
 
 	// GETs
-	e.GET("/wanted", wanted)
-	e.GET("/cover", cover)
+	e.GET("/inprogress", inprogress)
 
-	// DELETEs
-	e.DELETE("/delete", delete)
+	// POSTs
+	e.POST("/inprogress/add", add_inprogress)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
@@ -42,144 +39,35 @@ func HandleRequests(port int, database *gorm.DB) {
 
 // GETs
 
-func wanted(c echo.Context) error {
-	var want []Want
-	db.Find(&want)
-	return c.JSON(http.StatusOK, want)
+func inprogress(c echo.Context) error {
+	var inprogress []models.InProgress
+	db.Find(&inprogress)
+	return c.JSON(http.StatusOK, inprogress)
 }
 
-func cover(c echo.Context) error {
-	artist := c.QueryParam("artist")
-	if len(artist) < 1 {
-		return c.String(http.StatusBadRequest, "Param 'artist' is missing")
-	}
+// POSTs
 
-	album := c.QueryParam("album")
-	if len(album) < 1 {
-		return c.String(http.StatusBadRequest, "Param 'album' is missing")
+func add_inprogress(c echo.Context) error {
+	idstr := c.QueryParam("id")
+	if len(idstr) < 1 {
+		return c.String(http.StatusBadRequest, "Param 'id' is missing")
 	}
-
-	musicbrainz_ids, err := get_musicbrainz_ids(artist, album)
+	id, err := strconv.ParseUint(idstr, 10, 64)
 	if err != nil {
-		log.Errorf("Failed to get musicbrainz id: %s", err)
-		return c.String(http.StatusNotFound, "Failed to get MusicBrainz ID")
+		return c.String(http.StatusBadRequest, "Failed to parse id")
 	}
 
-	album_art_link, err := get_album_art_link(musicbrainz_ids)
-	if err != nil {
-		log.Errorf("Failed to get album art link: %s", err)
-		return c.String(http.StatusNotFound, "Failed to get album art link")
-	}
-
-	return c.JSON(http.StatusOK, CoverResponse{album_art_link})
-}
-
-// DELETEs
-
-func delete(c echo.Context) error {
-	body, err := io.ReadAll(c.Request().Body)
+	image, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "Failed to read request body")
 	}
 
-	var albums []Album
-	if err := json.Unmarshal(body, &albums); err != nil {
-		return c.String(http.StatusInternalServerError, "Failed to parse request body")
-	}
+	var currentTracker models.InProgress
+	db.First(currentTracker, &models.InProgress{Id: id})
 
-	db.Delete(&Want{}, albums)
+	newFileName := path.Join(currentTracker.Folder, fmt.Sprintf("%s.jpg", time.Now().Format("2006-01-02-03-04-05.678")))
 
-	return c.String(http.StatusOK, "Albums deleted")
-}
+	os.WriteFile(newFileName, image, 0644)
 
-// Private Functions
-
-func get_musicbrainz_ids(artist string, album string) ([]string, error) {
-	makingRequest.Lock()
-
-	resp, err := http.Get("https://musicbrainz.org/ws/2/release/?query=" + url.QueryEscape(fmt.Sprintf("artistname:%s AND release:%s", artist, album)) + "&fmt=json")
-	time.Sleep(100 * time.Millisecond)
-	makingRequest.Unlock()
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get musicbrainz id: %s", resp.Status)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var mbResp MusicBrainzResponse
-	if err := json.Unmarshal(body, &mbResp); err != nil {
-		return nil, err
-	}
-
-	if len(mbResp.Releases) < 1 {
-		return nil, fmt.Errorf("no releases found for %s - %s\nbody: %s", artist, album, body)
-	}
-
-	ids := make([]string, len(mbResp.Releases))
-
-	for i, release := range mbResp.Releases {
-		ids[i] = release.Id
-	}
-
-	return ids, nil
-}
-
-func get_album_art_link(musicbrainz_ids []string) (string, error) {
-	for _, id := range musicbrainz_ids {
-		link, err := sub_get_album_art_link(id)
-		if err != nil {
-			return "", err
-		}
-		if len(link) > 0 {
-			return link, nil
-		}
-	}
-	return "", fmt.Errorf("no images found")
-}
-
-func sub_get_album_art_link(musicbrainz_id string) (string, error) {
-	makingRequest.Lock()
-
-	resp, err := http.Get(fmt.Sprintf("https://coverartarchive.org/release/%s?fmt=json", musicbrainz_id))
-	time.Sleep(100 * time.Millisecond)
-	makingRequest.Unlock()
-	if err != nil {
-		return "", err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to get album art link: %s", resp.Status)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var coverArtResponse struct {
-		Images []struct {
-			Image string `json:"image"`
-			Front bool   `json:"front"`
-		} `json:"images"`
-	}
-	if err := json.Unmarshal(body, &coverArtResponse); err != nil {
-		return "", err
-	}
-
-	if len(coverArtResponse.Images) > 0 && coverArtResponse.Images[0].Front {
-		return coverArtResponse.Images[0].Image, nil
-	}
-
-	return "", nil
+	return c.String(http.StatusOK, "Image added")
 }
