@@ -17,13 +17,13 @@ import (
 )
 
 var db *gorm.DB
-var baseInProgressFolder string
+var baseFolder string
 
 // Starts listening for requests on the given port
 func HandleRequests(port int, database *gorm.DB) {
 	db = database
-	baseInProgressFolder = os.Getenv("BASE_INPROGRESS_FOLDER")
-	ensureInProgressFolderExists(baseInProgressFolder)
+	baseFolder = os.Getenv("BASE_INPROGRESS_FOLDER")
+	ensureBaseFolderExists(baseFolder)
 
 	e := echo.New()
 
@@ -40,7 +40,7 @@ func HandleRequests(port int, database *gorm.DB) {
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
 
-func ensureInProgressFolderExists(baseInProgressFolder string) {
+func ensureBaseFolderExists(baseInProgressFolder string) {
 	if _, err := os.Stat(baseInProgressFolder); err != nil {
 		os.Mkdir(baseInProgressFolder, 0755)
 	}
@@ -84,7 +84,7 @@ func add_inprogress(c echo.Context) error {
 
 	var currentTracker models.InProgress
 	if id == 0 {
-		currentTracker, err = createNewInProgressFolder(currentTracker)
+		currentTracker, err = createNewTrackerFolder(currentTracker)
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
 			c.Logger().Infof("%s: %s", errMsg, err)
@@ -100,7 +100,7 @@ func add_inprogress(c echo.Context) error {
 	}
 
 	if currentTracker.Status == "Complete" {
-		currentTracker, err = createNewInProgressFolder(models.InProgress{})
+		currentTracker, err = createNewTrackerFolder(models.InProgress{})
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
 			c.Logger().Infof("%s: %s", errMsg, err)
@@ -126,9 +126,9 @@ func add_inprogress(c echo.Context) error {
 	return c.String(http.StatusOK, fmt.Sprintf("%d", currentTracker.Id))
 }
 
-func createNewInProgressFolder(currentTracker models.InProgress) (models.InProgress, error) {
+func createNewTrackerFolder(currentTracker models.InProgress) (models.InProgress, error) {
 	currentTracker.Date = time.Now()
-	newFileName := path.Join(baseInProgressFolder, uuid.New().String())
+	newFileName := path.Join(baseFolder, uuid.New().String())
 	err := os.Mkdir(newFileName, 0755)
 	if err != nil {
 		return currentTracker, err
