@@ -85,21 +85,26 @@ func add_inprogress(c echo.Context) error {
 
 	var currentTracker models.InProgress
 	if id == 0 {
-		currentTracker.Date = time.Now()
-		newFileName := path.Join(baseInProgressFolder, uuid.New().String())
-		err = os.Mkdir(newFileName, 0755)
+		currentTracker, err = createNewInProgressFolder(currentTracker)
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
 			log.Infof("%s: %s", errMsg, err)
 			return c.String(http.StatusInternalServerError, errMsg)
 		}
-		currentTracker.Folder = newFileName
-		db.Create(&currentTracker)
 	} else {
 		test := db.Where(models.InProgress{Id: id}).First(&currentTracker)
 		if test.Error != nil {
 			errMsg := "Failed fetching progress tracker"
 			log.Infof("%s: %s", errMsg, test.Error)
+			return c.String(http.StatusInternalServerError, errMsg)
+		}
+	}
+
+	if currentTracker.Status == "Complete" {
+		currentTracker, err = createNewInProgressFolder(models.InProgress{})
+		if err != nil {
+			errMsg := "Failed creating folder for progress"
+			log.Infof("%s: %s", errMsg, err)
 			return c.String(http.StatusInternalServerError, errMsg)
 		}
 	}
@@ -116,4 +121,17 @@ func add_inprogress(c echo.Context) error {
 	log.Tracef("Added image to %d", currentTracker.Id)
 
 	return c.String(http.StatusOK, fmt.Sprintf("%d", currentTracker.Id))
+}
+
+func createNewInProgressFolder(currentTracker models.InProgress) (models.InProgress, error) {
+	currentTracker.Date = time.Now()
+	newFileName := path.Join(baseInProgressFolder, uuid.New().String())
+	err := os.Mkdir(newFileName, 0755)
+	if err != nil {
+		return currentTracker, err
+	}
+	currentTracker.Folder = newFileName
+	db.Create(&currentTracker)
+
+	return currentTracker, nil
 }

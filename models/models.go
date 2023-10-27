@@ -12,4 +12,5 @@ type InProgress struct {
 	Id     uint64    `json:"id" gorm:"primaryKey"`
 	Date   time.Time `json:"date"`
 	Folder string    `json:"folder"`
+	Status string    `json:"status" gorm:"default:InProgress"`
 }
