@@ -113,5 +113,7 @@ func add_inprogress(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, errMsg)
 	}
 
+	log.Tracef("Added image to %d", currentTracker.Id)
+
 	return c.String(http.StatusOK, fmt.Sprintf("%d", currentTracker.Id))
 }
