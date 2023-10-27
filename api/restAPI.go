@@ -34,6 +34,7 @@ func HandleRequests(port int, database *gorm.DB) {
 	// GETs
 	e.GET("/inprogress", inprogress)
 	e.GET("/videos", videos)
+	e.GET("/video", video)
 
 	// POSTs
 	e.POST("/inprogress/add", add_inprogress)
@@ -61,12 +62,40 @@ func inprogress(c echo.Context) error {
 }
 
 func videos(c echo.Context) error {
-	var video []models.Video
-	db.Find(&video)
+	var videos []models.Video
+	db.Find(&videos)
 
 	c.Logger().Debug("Retrieved videos")
 
-	return c.JSON(http.StatusOK, inprogress)
+	return c.JSON(http.StatusOK, videos)
+}
+
+func video(c echo.Context) error {
+	idstr := c.QueryParam("id")
+	if len(idstr) < 1 {
+		errMsg := "Param 'id' is missing"
+		c.Logger().Info(errMsg)
+		return c.String(http.StatusBadRequest, errMsg)
+	}
+	id, err := strconv.ParseUint(idstr, 10, 64)
+	if err != nil {
+		errMsg := "Failed to parse id"
+		c.Logger().Infof("%s: %s", errMsg, err)
+		return c.String(http.StatusBadRequest, errMsg)
+	}
+
+	var video models.Video
+	result := db.Where(models.Video{Id: id}).First(&video)
+	if result.Error != nil {
+		errMsg := fmt.Sprintf("Video with id %d does not exist", id)
+		c.Logger().Infof("%s: %s", errMsg, result.Error)
+		return c.String(http.StatusBadRequest, errMsg)
+	}
+
+	c.Logger().Debug("Retrieved video")
+
+	// return c.JSON(http.StatusOK, video)
+	return c.File(video.Location)
 }
 
 // POSTs
@@ -88,7 +117,7 @@ func add_inprogress(c echo.Context) error {
 	image, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		errMsg := "Failed to read request body"
-		c.Logger().Infof("%s: %s", errMsg, err)
+		c.Logger().Errorf("%s: %s", errMsg, err)
 		return c.String(http.StatusInternalServerError, errMsg)
 	}
 
@@ -97,15 +126,15 @@ func add_inprogress(c echo.Context) error {
 		currentTracker, err = createNewTrackerFolder(currentTracker)
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
-			c.Logger().Infof("%s: %s", errMsg, err)
+			c.Logger().Errorf("%s: %s", errMsg, err)
 			return c.String(http.StatusInternalServerError, errMsg)
 		}
 	} else {
-		test := db.Where(models.InProgress{Id: id}).First(&currentTracker)
-		if test.Error != nil {
-			errMsg := "Failed fetching progress tracker"
-			c.Logger().Infof("%s: %s", errMsg, test.Error)
-			return c.String(http.StatusInternalServerError, errMsg)
+		result := db.Where(models.InProgress{Id: id}).First(&currentTracker)
+		if result.Error != nil {
+			errMsg := fmt.Sprintf("Progress tracker with id %d does not exist", id)
+			c.Logger().Infof("%s: %s", errMsg, result.Error)
+			return c.String(http.StatusBadRequest, errMsg)
 		}
 	}
 
@@ -113,7 +142,7 @@ func add_inprogress(c echo.Context) error {
 		currentTracker, err = createNewTrackerFolder(models.InProgress{})
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
-			c.Logger().Infof("%s: %s", errMsg, err)
+			c.Logger().Errorf("%s: %s", errMsg, err)
 			return c.String(http.StatusInternalServerError, errMsg)
 		}
 	}
@@ -125,7 +154,7 @@ func add_inprogress(c echo.Context) error {
 	err = os.WriteFile(newFileName, image, 0644)
 	if err != nil {
 		errMsg := "Failed writing image"
-		c.Logger().Infof("%s: %s", errMsg, err)
+		c.Logger().Errorf("%s: %s", errMsg, err)
 		return c.String(http.StatusInternalServerError, errMsg)
 	}
 
