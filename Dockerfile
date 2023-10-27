@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.19-alpine
+FROM golang:1.21-alpine
 
 WORKDIR /app
 COPY go.mod ./
@@ -10,8 +10,9 @@ RUN go mod download
 COPY *.go ./
 COPY api ./api
 COPY docs ./docs
+COPY models ./models
 RUN go build
 
 EXPOSE 3001
 
-CMD [ "/app/music-wishlist-api" ]
+CMD [ "/app/timelapse-manager" ]
