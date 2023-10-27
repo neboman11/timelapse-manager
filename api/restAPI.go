@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/neboman11/timelapse-manager/models"
@@ -16,10 +18,14 @@ import (
 )
 
 var db *gorm.DB
+var baseInProgressFolder string
 
 // Starts listening for requests on the given port
 func HandleRequests(port int, database *gorm.DB) {
 	db = database
+	baseInProgressFolder = os.Getenv("BASE_INPROGRESS_FOLDER")
+	ensureInProgressFolderExists(baseInProgressFolder)
+
 	e := echo.New()
 
 	e.Use(middleware.Logger())
@@ -35,6 +41,12 @@ func HandleRequests(port int, database *gorm.DB) {
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
 
+func ensureInProgressFolderExists(baseInProgressFolder string) {
+	if _, err := os.Stat(baseInProgressFolder); err != nil {
+		os.Mkdir(baseInProgressFolder, 0755)
+	}
+}
+
 // Routes
 
 // GETs
@@ -42,6 +54,9 @@ func HandleRequests(port int, database *gorm.DB) {
 func inprogress(c echo.Context) error {
 	var inprogress []models.InProgress
 	db.Find(&inprogress)
+
+	log.Trace("Retrieved in progress")
+
 	return c.JSON(http.StatusOK, inprogress)
 }
 
@@ -50,24 +65,53 @@ func inprogress(c echo.Context) error {
 func add_inprogress(c echo.Context) error {
 	idstr := c.QueryParam("id")
 	if len(idstr) < 1 {
-		return c.String(http.StatusBadRequest, "Param 'id' is missing")
+		errMsg := "Param 'id' is missing"
+		log.Info(errMsg)
+		return c.String(http.StatusBadRequest, errMsg)
 	}
 	id, err := strconv.ParseUint(idstr, 10, 64)
 	if err != nil {
-		return c.String(http.StatusBadRequest, "Failed to parse id")
+		errMsg := "Failed to parse id"
+		log.Infof("%s: %s", errMsg, err)
+		return c.String(http.StatusBadRequest, errMsg)
 	}
 
 	image, err := io.ReadAll(c.Request().Body)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Failed to read request body")
+		errMsg := "Failed to read request body"
+		log.Infof("%s: %s", errMsg, err)
+		return c.String(http.StatusInternalServerError, errMsg)
 	}
 
 	var currentTracker models.InProgress
-	db.First(currentTracker, &models.InProgress{Id: id})
+	if id == 0 {
+		currentTracker.Date = time.Now()
+		newFileName := path.Join(baseInProgressFolder, uuid.New().String())
+		err = os.Mkdir(newFileName, 0755)
+		if err != nil {
+			errMsg := "Failed creating folder for progress"
+			log.Infof("%s: %s", errMsg, err)
+			return c.String(http.StatusInternalServerError, errMsg)
+		}
+		currentTracker.Folder = newFileName
+		db.Create(&currentTracker)
+	} else {
+		test := db.Where(models.InProgress{Id: id}).First(&currentTracker)
+		if test.Error != nil {
+			errMsg := "Failed fetching progress tracker"
+			log.Infof("%s: %s", errMsg, test.Error)
+			return c.String(http.StatusInternalServerError, errMsg)
+		}
+	}
 
-	newFileName := path.Join(currentTracker.Folder, fmt.Sprintf("%s.jpg", time.Now().Format("2006-01-02-03-04-05.678")))
+	newFileName := path.Join(currentTracker.Folder, fmt.Sprintf("%s.jpg", time.Now().Format("2006-01-02-03-04-05.999")))
 
-	os.WriteFile(newFileName, image, 0644)
+	err = os.WriteFile(newFileName, image, 0644)
+	if err != nil {
+		errMsg := "Failed writing image"
+		log.Infof("%s: %s", errMsg, err)
+		return c.String(http.StatusInternalServerError, errMsg)
+	}
 
-	return c.String(http.StatusOK, "Image added")
+	return c.String(http.StatusOK, fmt.Sprintf("%d", currentTracker.Id))
 }

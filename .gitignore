@@ -21,7 +21,16 @@
 go.work
 
 # Output binary
-music-wishlist-api
+timelapse-manager
 
 # Environment files
 .env
+
+# Test database
+.db/
+
+# Test folder
+testfolder/
+
+# vscode
+.vscode/
