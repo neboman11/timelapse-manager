@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -42,7 +43,7 @@ func startDaemon(port int) {
 
 func encodeInProgress() {
 	// ticker := time.NewTicker(24 * time.Hour)
-	ticker := time.NewTicker(10 * time.Minute)
+	ticker := time.NewTicker(5 * time.Minute)
 
 	for {
 		<-ticker.C
@@ -65,9 +66,10 @@ func encodeInProgress() {
 			stdout, err := cmd.CombinedOutput()
 			if err != nil {
 				log.Error().Err(err)
+				continue
 			}
 
-			log.Info().Msgf("%s", stdout)
+			log.Debug().Str("working_directory", timelapse.Folder).Str("command", fmt.Sprintf("%s %s", cmd.Path, strings.Join(cmd.Args, " "))).Msgf("%s", stdout)
 
 			timelapse.Status = "Complete"
 			db.Save(timelapse)
@@ -80,6 +82,7 @@ func encodeInProgress() {
 			files, err := os.ReadDir(timelapse.Folder)
 			if err != nil {
 				log.Error().Err(err)
+				continue
 			}
 
 			for _, file := range files {
