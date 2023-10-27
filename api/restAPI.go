@@ -33,6 +33,7 @@ func HandleRequests(port int, database *gorm.DB) {
 
 	// GETs
 	e.GET("/inprogress", inprogress)
+	e.GET("/videos", videos)
 
 	// POSTs
 	e.POST("/inprogress/add", add_inprogress)
@@ -55,6 +56,15 @@ func inprogress(c echo.Context) error {
 	db.Find(&inprogress)
 
 	c.Logger().Debug("Retrieved in progress")
+
+	return c.JSON(http.StatusOK, inprogress)
+}
+
+func videos(c echo.Context) error {
+	var video []models.Video
+	db.Find(&video)
+
+	c.Logger().Debug("Retrieved videos")
 
 	return c.JSON(http.StatusOK, inprogress)
 }

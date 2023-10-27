@@ -74,7 +74,7 @@ func encodeInProgress() {
 			timelapse.Status = "Complete"
 			db.Save(timelapse)
 
-			var video models.Videos
+			var video models.Video
 			video.Date = time.Now()
 			video.Location = path.Join(timelapse.Folder, "complete.mp4")
 			db.Create(&video)

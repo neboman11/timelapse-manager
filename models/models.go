@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-type Videos struct {
+type Video struct {
 	Id       uint64    `json:"id" gorm:"primaryKey"`
 	Date     time.Time `json:"date"`
 	Location string    `json:"location"`
