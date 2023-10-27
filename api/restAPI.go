@@ -22,7 +22,7 @@ var baseFolder string
 // Starts listening for requests on the given port
 func HandleRequests(port int, database *gorm.DB) {
 	db = database
-	baseFolder = os.Getenv("BASE_INPROGRESS_FOLDER")
+	baseFolder = os.Getenv("BASE_FOLDER")
 	ensureBaseFolderExists(baseFolder)
 
 	e := echo.New()
