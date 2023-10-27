@@ -13,4 +13,5 @@ type InProgress struct {
 	Date   time.Time `json:"date"`
 	Folder string    `json:"folder"`
 	Status string    `json:"status" gorm:"default:InProgress"`
+	Count  uint32    `json:"count" gorm:"default:0"`
 }

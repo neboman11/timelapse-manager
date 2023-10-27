@@ -1,9 +1,8 @@
 module github.com/neboman11/timelapse-manager
 
-go 1.17
+go 1.21
 
 require (
-	github.com/gofiber/fiber/v2 v2.50.0
 	github.com/google/uuid v1.3.1
 	github.com/labstack/echo/v4 v4.9.0
 	github.com/rs/zerolog v1.26.1

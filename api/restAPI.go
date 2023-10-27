@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -55,7 +54,7 @@ func inprogress(c echo.Context) error {
 	var inprogress []models.InProgress
 	db.Find(&inprogress)
 
-	log.Trace("Retrieved in progress")
+	c.Logger().Debug("Retrieved in progress")
 
 	return c.JSON(http.StatusOK, inprogress)
 }
@@ -66,20 +65,20 @@ func add_inprogress(c echo.Context) error {
 	idstr := c.QueryParam("id")
 	if len(idstr) < 1 {
 		errMsg := "Param 'id' is missing"
-		log.Info(errMsg)
+		c.Logger().Info(errMsg)
 		return c.String(http.StatusBadRequest, errMsg)
 	}
 	id, err := strconv.ParseUint(idstr, 10, 64)
 	if err != nil {
 		errMsg := "Failed to parse id"
-		log.Infof("%s: %s", errMsg, err)
+		c.Logger().Infof("%s: %s", errMsg, err)
 		return c.String(http.StatusBadRequest, errMsg)
 	}
 
 	image, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		errMsg := "Failed to read request body"
-		log.Infof("%s: %s", errMsg, err)
+		c.Logger().Infof("%s: %s", errMsg, err)
 		return c.String(http.StatusInternalServerError, errMsg)
 	}
 
@@ -88,14 +87,14 @@ func add_inprogress(c echo.Context) error {
 		currentTracker, err = createNewInProgressFolder(currentTracker)
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
-			log.Infof("%s: %s", errMsg, err)
+			c.Logger().Infof("%s: %s", errMsg, err)
 			return c.String(http.StatusInternalServerError, errMsg)
 		}
 	} else {
 		test := db.Where(models.InProgress{Id: id}).First(&currentTracker)
 		if test.Error != nil {
 			errMsg := "Failed fetching progress tracker"
-			log.Infof("%s: %s", errMsg, test.Error)
+			c.Logger().Infof("%s: %s", errMsg, test.Error)
 			return c.String(http.StatusInternalServerError, errMsg)
 		}
 	}
@@ -104,21 +103,25 @@ func add_inprogress(c echo.Context) error {
 		currentTracker, err = createNewInProgressFolder(models.InProgress{})
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
-			log.Infof("%s: %s", errMsg, err)
+			c.Logger().Infof("%s: %s", errMsg, err)
 			return c.String(http.StatusInternalServerError, errMsg)
 		}
 	}
 
-	newFileName := path.Join(currentTracker.Folder, fmt.Sprintf("%s.jpg", time.Now().Format("2006-01-02-03-04-05.999")))
+	currentTracker.Count += 1
+
+	newFileName := path.Join(currentTracker.Folder, fmt.Sprintf("%05d.jpg", currentTracker.Count))
 
 	err = os.WriteFile(newFileName, image, 0644)
 	if err != nil {
 		errMsg := "Failed writing image"
-		log.Infof("%s: %s", errMsg, err)
+		c.Logger().Infof("%s: %s", errMsg, err)
 		return c.String(http.StatusInternalServerError, errMsg)
 	}
 
-	log.Tracef("Added image to %d", currentTracker.Id)
+	db.Save(currentTracker)
+
+	c.Logger().Debugf("Added image to %d", currentTracker.Id)
 
 	return c.String(http.StatusOK, fmt.Sprintf("%d", currentTracker.Id))
 }

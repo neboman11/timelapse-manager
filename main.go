@@ -2,6 +2,9 @@ package main
 
 import (
 	"flag"
+	"os"
+	"os/exec"
+	"path"
 
 	"github.com/rs/zerolog/log"
 
@@ -21,6 +24,8 @@ func main() {
 		log.Fatal().Msg("Invalid port specified.")
 	}
 
+	go encodeInProgress()
+
 	startDaemon(*portPtr)
 }
 
@@ -29,4 +34,28 @@ func startDaemon(port int) {
 	open_database()
 	log.Info().Msg("Ready for requests")
 	api.HandleRequests(port, db)
+}
+
+func encodeInProgress() {
+	baseInProgressFolder := os.Getenv("BASE_INPROGRESS_FOLDER")
+	workingEncodingFolder := path.Join(baseInProgressFolder, "60e849a9-04c9-4edb-9204-d830f64d5cd0")
+
+	var ffmpegArgs []string
+
+	ffmpegArgs = append(ffmpegArgs, "-f")
+	ffmpegArgs = append(ffmpegArgs, "image2")
+	ffmpegArgs = append(ffmpegArgs, "-r")
+	ffmpegArgs = append(ffmpegArgs, "1")
+	ffmpegArgs = append(ffmpegArgs, "-i")
+	ffmpegArgs = append(ffmpegArgs, path.Join(workingEncodingFolder, "%05d.jpg"))
+	ffmpegArgs = append(ffmpegArgs, path.Join(workingEncodingFolder, "test.avi"))
+
+	cmd := exec.Command("ffmpeg", ffmpegArgs...)
+
+	stdout, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	log.Info().Msgf("%s", stdout)
 }
