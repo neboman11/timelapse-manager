@@ -11,7 +11,7 @@ picam2.configure(preview_config)
 
 
 def take_picture(scheduler):
-    my_scheduler.enter(5, 1, take_picture, (my_scheduler,))
+    scheduler.enter(5, 1, take_picture, (scheduler,))
 
     picam2.start_preview(Preview.QTGL)
 
