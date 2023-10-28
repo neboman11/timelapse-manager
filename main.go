@@ -42,8 +42,7 @@ func startDaemon(port int) {
 }
 
 func encodeInProgress() {
-	// ticker := time.NewTicker(24 * time.Hour)
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(24 * time.Hour)
 
 	for {
 		<-ticker.C
