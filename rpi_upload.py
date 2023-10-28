@@ -1,0 +1,40 @@
+import sched
+from picamera2 import Picamera2, Preview
+import requests
+import time
+
+picam2 = Picamera2()
+current_id = 0
+
+preview_config = picam2.create_preview_configuration(main={"size": (1280, 720)})
+picam2.configure(preview_config)
+
+
+def take_picture(scheduler):
+    my_scheduler.enter(5, 1, take_picture, (my_scheduler,))
+
+    picam2.start_preview(Preview.QTGL)
+
+    picam2.start()
+    time.sleep(2)
+
+    metadata = picam2.capture_file("current_frame.jpg")
+    print(metadata)
+
+    picam2.close()
+
+    image_content = None
+    with open("current_frame.jpg", "rb") as f:
+        image_content = f.read()
+
+    response = requests.post(
+        f"http://timelapse/inprogress/add?id={current_id}", image_content
+    )
+
+    response.raise_for_status()
+    current_id = response.content.decode()
+
+
+my_scheduler = sched.scheduler(time.time, time.sleep)
+my_scheduler.enter(5, 1, take_picture, (my_scheduler,))
+my_scheduler.run()

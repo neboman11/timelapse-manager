@@ -25,6 +25,7 @@ timelapse-manager
 
 # Environment files
 .env
+.venv/
 
 # Test database
 .db/
