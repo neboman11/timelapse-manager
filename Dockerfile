@@ -15,7 +15,7 @@ RUN go build
 
 FROM linuxserver/ffmpeg:version-6.0-cli
 WORKDIR /app
-COPY --from=build app ./
+COPY --from=build build ./
 
 VOLUME /data
 
