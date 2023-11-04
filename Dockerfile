@@ -21,4 +21,4 @@ VOLUME /data
 
 EXPOSE 3001
 
-CMD [ "/app/timelapse-manager" ]
+ENTRYPOINT [ "/app/timelapse-manager" ]
