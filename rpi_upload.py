@@ -11,18 +11,14 @@ picam2.configure(preview_config)
 
 
 def take_picture(scheduler):
+    global current_id
     scheduler.enter(5, 1, take_picture, (scheduler,))
 
     try:
-        picam2.start_preview(Preview.QTGL)
-
-        picam2.start()
         time.sleep(2)
 
         metadata = picam2.capture_file("current_frame.jpg")
         print(metadata)
-
-        picam2.close()
 
         image_content = None
         with open("current_frame.jpg", "rb") as f:
@@ -39,6 +35,7 @@ def take_picture(scheduler):
 
 
 def main():
+    picam2.start()
     my_scheduler = sched.scheduler(time.time, time.sleep)
     my_scheduler.enter(5, 1, take_picture, (my_scheduler,))
     my_scheduler.run()
