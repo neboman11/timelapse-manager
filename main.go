@@ -50,6 +50,9 @@ func encodeInProgress() {
 		db.Where(models.InProgress{Status: "InProgress"}).Find(&inProgressTimelapses)
 
 		for _, timelapse := range inProgressTimelapses {
+			timelapse.Status = "Complete"
+			db.Save(timelapse)
+
 			var ffmpegArgs []string
 
 			ffmpegArgs = append(ffmpegArgs, "-f")
@@ -69,9 +72,6 @@ func encodeInProgress() {
 			}
 
 			log.Debug().Str("working_directory", timelapse.Folder).Str("command", fmt.Sprintf("%s %s", cmd.Path, strings.Join(cmd.Args, " "))).Msgf("%s", stdout)
-
-			timelapse.Status = "Complete"
-			db.Save(timelapse)
 
 			var video models.Video
 			video.Date = time.Now()
