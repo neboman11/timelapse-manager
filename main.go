@@ -67,7 +67,7 @@ func encodeInProgress() {
 
 			stdout, err := cmd.CombinedOutput()
 			if err != nil {
-				log.Error().Err(err)
+				log.Error().Str("encode_step", "exec").Err(err)
 				continue
 			}
 
