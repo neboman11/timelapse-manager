@@ -56,6 +56,7 @@ func encodeInProgress() {
 
 			var ffmpegArgs []string
 
+			ffmpegArgs = append(ffmpegArgs, "-y")
 			ffmpegArgs = append(ffmpegArgs, "-f")
 			ffmpegArgs = append(ffmpegArgs, "image2")
 			ffmpegArgs = append(ffmpegArgs, "-r")
