@@ -67,7 +67,7 @@ func encodeInProgress() {
 
 			stdout, err := cmd.CombinedOutput()
 			if err != nil {
-				log.Error().Str("encode_step", "exec").Err(err)
+				log.Error().Str("encode_step", "exec").Err(err).Msgf("%s", stdout)
 				continue
 			}
 
@@ -80,7 +80,7 @@ func encodeInProgress() {
 
 			files, err := os.ReadDir(timelapse.Folder)
 			if err != nil {
-				log.Error().Err(err)
+				log.Error().Err(err).Msg("error reading folder")
 				continue
 			}
 
