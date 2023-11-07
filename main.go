@@ -45,11 +45,12 @@ func encodeInProgress() {
 	ticker := time.NewTicker(24 * time.Hour)
 
 	for {
-		log.Debug().Msg("Encoding in progress")
+		log.Debug().Msg("Beginning encoding process")
 		var inProgressTimelapses []models.InProgress
 		db.Where(models.InProgress{Status: "InProgress"}).Find(&inProgressTimelapses)
 
 		for _, timelapse := range inProgressTimelapses {
+			log.Debug().Msgf("Starting encoding for %d", timelapse.Id)
 			timelapse.Status = "Complete"
 			db.Save(timelapse)
 
@@ -90,6 +91,8 @@ func encodeInProgress() {
 				}
 			}
 		}
+
+		log.Debug().Msg("Finished encoding process")
 
 		// Wait for ticker at end so it runs on startup
 		<-ticker.C
