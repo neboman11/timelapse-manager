@@ -33,7 +33,9 @@ def take_picture(scheduler):
         )
 
         response = requests.post(
-            f"http://timelapse/inprogress/add?id={current_id}", flippedImg.imencode()
+            f"http://timelapse/inprogress/add?id={current_id}",
+            cv.imencode(".jpg", flippedImg)[1].tobytes(),
+            headers={"Content-Type": "image/jpeg"},
         )
 
         response.raise_for_status()
