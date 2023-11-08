@@ -27,10 +27,11 @@ def take_picture(scheduler):
         image = cv.putText(
             image,
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            (20, 20),
+            (50, 50),
             cv.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
             2,
-            255,
         )
 
         response = requests.post(
