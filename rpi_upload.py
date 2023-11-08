@@ -3,6 +3,7 @@ from datetime import datetime
 from picamera2 import Picamera2, Preview
 import requests
 import sched
+import sys
 import time
 
 picam2 = Picamera2()
@@ -22,8 +23,8 @@ def take_picture(scheduler):
         picam2.capture_file("current_frame.jpg")
 
         image = cv.imread("current_frame.jpg")
-        flippedImg = cv.flip(image, 0)
-        cv.putText(
+        image = cv.flip(image, 0)
+        image = cv.putText(
             image,
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             (20, 20),
@@ -34,7 +35,7 @@ def take_picture(scheduler):
 
         response = requests.post(
             f"http://timelapse/inprogress/add?id={current_id}",
-            cv.imencode(".jpg", flippedImg)[1].tobytes(),
+            cv.imencode(".jpg", image)[1].tobytes(),
             headers={"Content-Type": "image/jpeg"},
         )
 
@@ -45,6 +46,9 @@ def take_picture(scheduler):
 
 
 def main():
+    global current_id
+    if len(sys.argv > 1):
+        current_id = sys.argv[1]
     picam2.start()
     my_scheduler = sched.scheduler(time.time, time.sleep)
     my_scheduler.enter(5, 1, take_picture, (my_scheduler,))
