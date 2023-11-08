@@ -47,7 +47,7 @@ def take_picture(scheduler):
 
 def main():
     global current_id
-    if len(sys.argv > 1):
+    if len(sys.argv) > 1:
         current_id = sys.argv[1]
     picam2.start()
     my_scheduler = sched.scheduler(time.time, time.sleep)
