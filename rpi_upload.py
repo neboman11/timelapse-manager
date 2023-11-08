@@ -1,6 +1,8 @@
-import sched
+import cv2 as cv
+from datetime import datetime
 from picamera2 import Picamera2, Preview
 import requests
+import sched
 import time
 
 picam2 = Picamera2()
@@ -17,15 +19,21 @@ def take_picture(scheduler):
     try:
         time.sleep(2)
 
-        metadata = picam2.capture_file("current_frame.jpg")
-        print(metadata)
+        picam2.capture_file("current_frame.jpg")
 
-        image_content = None
-        with open("current_frame.jpg", "rb") as f:
-            image_content = f.read()
+        image = cv.imread("current_frame.jpg")
+        flippedImg = cv.flip(image, 0)
+        cv.putText(
+            image,
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            (20, 20),
+            cv.FONT_HERSHEY_SIMPLEX,
+            2,
+            255,
+        )
 
         response = requests.post(
-            f"http://timelapse/inprogress/add?id={current_id}", image_content
+            f"http://timelapse/inprogress/add?id={current_id}", flippedImg.imencode()
         )
 
         response.raise_for_status()
