@@ -50,6 +50,11 @@ func encodeInProgress() {
 		db.Where(models.InProgress{Status: "InProgress"}).Find(&inProgressTimelapses)
 
 		for _, timelapse := range inProgressTimelapses {
+			// Check to not encode one that is in progress within 24 hours
+			if timelapse.Date.After(time.Now().Add(-24 * time.Hour)) {
+				continue
+			}
+
 			log.Debug().Msgf("Starting encoding for %d", timelapse.Id)
 			timelapse.Status = "Complete"
 			db.Save(timelapse)
@@ -60,7 +65,7 @@ func encodeInProgress() {
 			ffmpegArgs = append(ffmpegArgs, "-f")
 			ffmpegArgs = append(ffmpegArgs, "image2")
 			ffmpegArgs = append(ffmpegArgs, "-r")
-			ffmpegArgs = append(ffmpegArgs, "1")
+			ffmpegArgs = append(ffmpegArgs, "3")
 			ffmpegArgs = append(ffmpegArgs, "-i")
 			ffmpegArgs = append(ffmpegArgs, path.Join(timelapse.Folder, "%05d.jpg"))
 			ffmpegArgs = append(ffmpegArgs, path.Join(timelapse.Folder, "complete.mp4"))
