@@ -82,6 +82,12 @@ func video(c echo.Context) error {
 		return c.String(http.StatusBadRequest, errMsg)
 	}
 
+	if timelapse.Status == "InProgress" || timelapse.Status == "Encoding" {
+		errMsg := "Video file has not been processed yet"
+		c.Logger().Infof("%s: %s", errMsg, result.Error)
+		return c.String(http.StatusBadRequest, errMsg)
+	}
+
 	c.Logger().Debug("Retrieved video")
 
 	return c.File(path.Join(timelapse.Folder, timelapse.VideoFile))
