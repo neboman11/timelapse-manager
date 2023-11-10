@@ -42,21 +42,22 @@ func startDaemon(port int) {
 }
 
 func encodeInProgress() {
-	ticker := time.NewTicker(24 * time.Hour)
+	const timelapseDuration = 24 * time.Hour
+	ticker := time.NewTicker(timelapseDuration)
 
 	for {
 		log.Debug().Msg("Beginning encoding process")
 		var inProgressTimelapses []models.InProgress
-		db.Where(models.InProgress{Status: "InProgress"}).Find(&inProgressTimelapses)
+		db.Where("status IN ?", []string{"Encoding", "InProgress"}).Find(&inProgressTimelapses)
 
 		for _, timelapse := range inProgressTimelapses {
 			// Check to not encode one that is in progress within 24 hours
-			if timelapse.Date.After(time.Now().Add(-24 * time.Hour)) {
+			if timelapse.Date.After(time.Now().Add(-timelapseDuration)) {
 				continue
 			}
 
 			log.Debug().Msgf("Starting encoding for %d", timelapse.Id)
-			timelapse.Status = "Complete"
+			timelapse.Status = "Encoding"
 			db.Save(timelapse)
 
 			var ffmpegArgs []string
@@ -96,6 +97,9 @@ func encodeInProgress() {
 					os.Remove(path.Join(timelapse.Folder, file.Name()))
 				}
 			}
+
+			timelapse.Status = "Complete"
+			db.Save(timelapse)
 		}
 
 		log.Debug().Msg("Finished encoding process")
