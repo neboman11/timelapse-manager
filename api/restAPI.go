@@ -32,8 +32,7 @@ func HandleRequests(port int, database *gorm.DB) {
 	e.Use(middleware.CORS())
 
 	// GETs
-	e.GET("/inprogress", inprogress)
-	e.GET("/videos", videos)
+	e.GET("/timelapses", timelapses)
 	e.GET("/video", video)
 
 	// POSTs
@@ -52,22 +51,13 @@ func ensureBaseFolderExists(baseInProgressFolder string) {
 
 // GETs
 
-func inprogress(c echo.Context) error {
-	var inprogress []models.InProgress
+func timelapses(c echo.Context) error {
+	var inprogress []models.Timelapse
 	db.Find(&inprogress)
 
 	c.Logger().Debug("Retrieved in progress")
 
 	return c.JSON(http.StatusOK, inprogress)
-}
-
-func videos(c echo.Context) error {
-	var videos []models.Video
-	db.Find(&videos)
-
-	c.Logger().Debug("Retrieved videos")
-
-	return c.JSON(http.StatusOK, videos)
 }
 
 func video(c echo.Context) error {
@@ -84,8 +74,8 @@ func video(c echo.Context) error {
 		return c.String(http.StatusBadRequest, errMsg)
 	}
 
-	var video models.Video
-	result := db.Where(models.Video{Id: id}).First(&video)
+	var timelapse models.Timelapse
+	result := db.Where(models.Timelapse{Id: id}).First(&timelapse)
 	if result.Error != nil {
 		errMsg := fmt.Sprintf("Video with id %d does not exist", id)
 		c.Logger().Infof("%s: %s", errMsg, result.Error)
@@ -94,8 +84,7 @@ func video(c echo.Context) error {
 
 	c.Logger().Debug("Retrieved video")
 
-	// return c.JSON(http.StatusOK, video)
-	return c.File(video.Location)
+	return c.File(path.Join(timelapse.Folder, timelapse.VideoFile))
 }
 
 // POSTs
@@ -121,7 +110,7 @@ func add_inprogress(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, errMsg)
 	}
 
-	var currentTracker models.InProgress
+	var currentTracker models.Timelapse
 	if id == 0 {
 		currentTracker, err = createNewTrackerFolder(currentTracker)
 		if err != nil {
@@ -130,7 +119,7 @@ func add_inprogress(c echo.Context) error {
 			return c.String(http.StatusInternalServerError, errMsg)
 		}
 	} else {
-		result := db.Where(models.InProgress{Id: id}).First(&currentTracker)
+		result := db.Where(models.Timelapse{Id: id}).First(&currentTracker)
 		if result.Error != nil {
 			errMsg := fmt.Sprintf("Progress tracker with id %d does not exist", id)
 			c.Logger().Infof("%s: %s", errMsg, result.Error)
@@ -139,7 +128,7 @@ func add_inprogress(c echo.Context) error {
 	}
 
 	if currentTracker.Status == "Complete" {
-		currentTracker, err = createNewTrackerFolder(models.InProgress{})
+		currentTracker, err = createNewTrackerFolder(models.Timelapse{})
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
 			c.Logger().Errorf("%s: %s", errMsg, err)
@@ -147,9 +136,9 @@ func add_inprogress(c echo.Context) error {
 		}
 	}
 
-	currentTracker.Count += 1
+	currentTracker.ImageCount += 1
 
-	newFileName := path.Join(currentTracker.Folder, fmt.Sprintf("%05d.jpg", currentTracker.Count))
+	newFileName := path.Join(currentTracker.Folder, fmt.Sprintf("%05d.jpg", currentTracker.ImageCount))
 
 	err = os.WriteFile(newFileName, image, 0644)
 	if err != nil {
@@ -165,8 +154,8 @@ func add_inprogress(c echo.Context) error {
 	return c.String(http.StatusOK, fmt.Sprintf("%d", currentTracker.Id))
 }
 
-func createNewTrackerFolder(currentTracker models.InProgress) (models.InProgress, error) {
-	currentTracker.Date = time.Now()
+func createNewTrackerFolder(currentTracker models.Timelapse) (models.Timelapse, error) {
+	currentTracker.StartDate = time.Now()
 	newFileName := path.Join(baseFolder, uuid.New().String())
 	err := os.Mkdir(newFileName, 0755)
 	if err != nil {

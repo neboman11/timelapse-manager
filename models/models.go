@@ -2,16 +2,12 @@ package models
 
 import "time"
 
-type Video struct {
-	Id       uint64    `json:"id" gorm:"primaryKey"`
-	Date     time.Time `json:"date"`
-	Location string    `json:"location"`
-}
-
-type InProgress struct {
-	Id     uint64    `json:"id" gorm:"primaryKey"`
-	Date   time.Time `json:"date"`
-	Folder string    `json:"folder"`
-	Status string    `json:"status" gorm:"default:InProgress"`
-	Count  uint32    `json:"count" gorm:"default:0"`
+type Timelapse struct {
+	Id         uint64    `json:"id" gorm:"primaryKey"`
+	StartDate  time.Time `json:"startDate"`
+	EndDate    time.Time `json:"endDate"`
+	Folder     string    `json:"folder"`
+	VideoFile  string    `json:"videoFile"`
+	Status     string    `json:"status" gorm:"default:InProgress"`
+	ImageCount uint32    `json:"imageCount" gorm:"default:0"`
 }

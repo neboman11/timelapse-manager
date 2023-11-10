@@ -20,5 +20,5 @@ func open_database() {
 		log.Fatalf("Failed to connect to database: %s", err)
 	}
 
-	db.AutoMigrate(&models.InProgress{}, &models.Video{})
+	db.AutoMigrate(&models.Timelapse{})
 }

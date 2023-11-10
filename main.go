@@ -43,16 +43,17 @@ func startDaemon(port int) {
 
 func encodeInProgress() {
 	const timelapseDuration = 24 * time.Hour
+	const outputVideoName = "complete.mp4"
 	ticker := time.NewTicker(timelapseDuration)
 
 	for {
 		log.Debug().Msg("Beginning encoding process")
-		var inProgressTimelapses []models.InProgress
+		var inProgressTimelapses []models.Timelapse
 		db.Where("status IN ?", []string{"Encoding", "InProgress"}).Find(&inProgressTimelapses)
 
 		for _, timelapse := range inProgressTimelapses {
 			// Check to not encode one that is in progress within 24 hours
-			if timelapse.Date.After(time.Now().Add(-timelapseDuration)) {
+			if timelapse.StartDate.After(time.Now().Add(-timelapseDuration)) {
 				continue
 			}
 
@@ -69,7 +70,7 @@ func encodeInProgress() {
 			ffmpegArgs = append(ffmpegArgs, "3")
 			ffmpegArgs = append(ffmpegArgs, "-i")
 			ffmpegArgs = append(ffmpegArgs, path.Join(timelapse.Folder, "%05d.jpg"))
-			ffmpegArgs = append(ffmpegArgs, path.Join(timelapse.Folder, "complete.mp4"))
+			ffmpegArgs = append(ffmpegArgs, path.Join(timelapse.Folder, outputVideoName))
 
 			cmd := exec.Command("ffmpeg", ffmpegArgs...)
 
@@ -81,10 +82,10 @@ func encodeInProgress() {
 
 			log.Debug().Str("working_directory", timelapse.Folder).Str("command", fmt.Sprintf("%s %s", cmd.Path, strings.Join(cmd.Args, " "))).Msgf("%s", stdout)
 
-			var video models.Video
-			video.Date = time.Now()
-			video.Location = path.Join(timelapse.Folder, "complete.mp4")
-			db.Create(&video)
+			timelapse.EndDate = time.Now()
+			timelapse.VideoFile = outputVideoName
+			timelapse.Status = "Complete"
+			db.Save(timelapse)
 
 			files, err := os.ReadDir(timelapse.Folder)
 			if err != nil {
@@ -97,9 +98,6 @@ func encodeInProgress() {
 					os.Remove(path.Join(timelapse.Folder, file.Name()))
 				}
 			}
-
-			timelapse.Status = "Complete"
-			db.Save(timelapse)
 		}
 
 		log.Debug().Msg("Finished encoding process")
