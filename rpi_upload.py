@@ -23,7 +23,6 @@ def take_picture(scheduler):
         picam2.capture_file("current_frame.jpg")
 
         image = cv.imread("current_frame.jpg")
-        image = cv.flip(image, 0)
         image = cv.putText(
             image,
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
