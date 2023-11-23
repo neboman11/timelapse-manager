@@ -82,7 +82,7 @@ func video(c echo.Context) error {
 		return c.String(http.StatusBadRequest, errMsg)
 	}
 
-	if timelapse.Status == "InProgress" || timelapse.Status == "Encoding" {
+	if timelapse.Status != "Complete" {
 		errMsg := "Video file has not been processed yet"
 		c.Logger().Infof("%s: %s", errMsg, result.Error)
 		return c.String(http.StatusBadRequest, errMsg)
@@ -133,7 +133,7 @@ func add_inprogress(c echo.Context) error {
 		}
 	}
 
-	if currentTracker.Status == "Complete" {
+	if currentTracker.Status != "InProgress" {
 		currentTracker, err = createNewTrackerFolder(models.Timelapse{})
 		if err != nil {
 			errMsg := "Failed creating folder for progress"
