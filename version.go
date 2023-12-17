@@ -4,4 +4,4 @@ package main
 var CurrentCommit string
 
 // CurrentVersionNumber is the current application's version literal
-const CurrentVersionNumber = "0.3.3"
+const CurrentVersionNumber = "0.3.4"
