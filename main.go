@@ -53,7 +53,7 @@ func encodeInProgress() {
 
 		for _, timelapse := range inProgressTimelapses {
 			// Check to not encode one that is in progress within 24 hours plus 5 minutes for a little bit of wiggle room
-			if timelapse.StartDate.After(time.Now().Add(-timelapseDuration).Add(-5 * time.Minute)) {
+			if timelapse.StartDate.After(time.Now().Add(-timelapseDuration).Add(5 * time.Minute)) {
 				continue
 			}
 
